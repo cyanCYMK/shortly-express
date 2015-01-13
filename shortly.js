@@ -43,14 +43,22 @@ function(req, res) {
 
 app.get('/create',
 function(req, res) {
-  res.render('index');
+  if (req.session.username){
+    res.render('index');
+  } else {
+    res.redirect('login');
+  }
 });
 
 app.get('/links',
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  });
+  if (req.session.username){
+    Links.reset().fetch().then(function(links) {
+      res.send(200, links.models);
+    });
+  } else {
+    res.send(405);
+  }
 });
 
 app.get('/login',
@@ -112,22 +120,16 @@ app.post('/login',
 function(req,res){
   // console.log('login post body:',req.body);
   // return res.send(200);
-  new User({username: req.body.username}).fetch().then(function(user) {
-    if (user) {
-      var salt = user.attributes.salt;
-      var password_hash = user.attributes.password_hash;
-      var checkHash = bcrypt.hashSync(req.body.password, salt);
-      if (checkHash === password_hash){
-        req.session.username = user.attributes.username;
-        res.redirect('/');
-      } else {
-        return res.redirect('/login');
-      }
-      // console.log('user',user.attributes.username);
+  User.checkUser(req.body.username, req.body.password, function(success){
+    if ( success ){
+      req.session.username = req.body.username;
+      res.redirect('/');
     } else {
-      return res.redirect('/login');
+      res.redirect('/login');
     }
   });
+
+
 });
 
 app.post('/signup',
@@ -141,6 +143,8 @@ app.post('/signup',
       password_hash: password_hash,
       salt: salt
     });
+
+
 
 
 
