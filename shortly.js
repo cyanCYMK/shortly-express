@@ -2,7 +2,8 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+var session = require('express-session');
+var cookieParser = require('cookie-parser');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -21,29 +22,60 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+app.use(cookieParser());
+app.use(session({
+  secret: 'nyancat'
+}));
 
 
-app.get('/', 
+app.get('/',
+function(req, res) {
+  // console.log('req.session:',req.session);
+  // if authenticated
+  if (req.session.username){
+    res.render('index');
+  } else {
+    res.redirect('login');
+  }
+});
+
+app.get('/create',
 function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
-function(req, res) {
-  res.render('index');
-});
-
-app.get('/links', 
+app.get('/links',
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
 
-app.post('/links', 
+app.get('/login',
 function(req, res) {
-  var uri = req.body.url;
+  res.render('login');
+});
 
+app.get('/signup',
+  function(req, res){
+    res.render('signup');
+  });
+
+app.get('/logout',
+  function(req,res){
+    // trash cookie
+    console.log('logging out');
+    req.session.destroy();
+    // redirect to homepage (which redirects to login)
+    res.redirect('/');
+  })
+
+app.post('/links',
+function(req, res) {
+  console.log("url=",req.url);
+  console.log("body=",req.body);
+  var uri = req.body.url;
+  console.log(uri);
   if (!util.isValidUrl(uri)) {
     console.log('Not a valid url: ', uri);
     return res.send(404);
@@ -73,6 +105,36 @@ function(req, res) {
     }
   });
 });
+
+app.post('/login',
+function(req,res){
+  // console.log('login post body:',req.body);
+  // return res.send(200);
+  new User({username: req.body.username}).fetch().then(function(user) {
+    if (user) {
+      // console.log('user',user.attributes.username);
+      req.session.username = user.attributes.username;
+      res.redirect('/');
+    } else {
+      return res.redirect('/login');
+    }
+  });
+});
+
+app.post('/signup',
+  function(req,res){
+    var user = new User({
+      username: req.body.username,
+      password_hash: req.body.password
+    });
+    console.log("User obj=>", user);
+    user.save().then(function(user){
+      //Users.add(user);
+      console.log('new user added:', user);
+      req.session.username = req.body.username;
+      res.redirect('/');
+    });
+  });
 
 /************************************************************/
 // Write your authentication routes here
