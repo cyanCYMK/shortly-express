@@ -34,8 +34,9 @@ window.Shortly = Backbone.View.extend({
 
   renderLogoutView: function(e){
     e && e.preventDefault();
-    window.location = 'http://127.0.0.1:4568/';
-    // this.router.navigate('/logout', { trigger: true, replace: true });
+    //window.location = 'http://127.0.0.1:4568/';
+    console.log("RenderLogoutView fired ...");
+    this.router.navigate('/logout', { trigger: true });
   },
 
   updateNav: function(routeName){
