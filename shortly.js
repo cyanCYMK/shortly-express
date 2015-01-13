@@ -11,6 +11,8 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var bcrypt = require('bcrypt-nodejs');
+
 
 var app = express();
 
@@ -112,9 +114,16 @@ function(req,res){
   // return res.send(200);
   new User({username: req.body.username}).fetch().then(function(user) {
     if (user) {
+      var salt = user.attributes.salt;
+      var password_hash = user.attributes.password_hash;
+      var checkHash = bcrypt.hashSync(req.body.password, salt);
+      if (checkHash === password_hash){
+        req.session.username = user.attributes.username;
+        res.redirect('/');
+      } else {
+        return res.redirect('/login');
+      }
       // console.log('user',user.attributes.username);
-      req.session.username = user.attributes.username;
-      res.redirect('/');
     } else {
       return res.redirect('/login');
     }
@@ -123,10 +132,19 @@ function(req,res){
 
 app.post('/signup',
   function(req,res){
+
+    var salt = bcrypt.genSaltSync(3);
+    var password_hash = bcrypt.hashSync(req.body.password, salt);
+
     var user = new User({
       username: req.body.username,
-      password_hash: req.body.password
+      password_hash: password_hash,
+      salt: salt
     });
+
+
+
+
     console.log("User obj=>", user);
     user.save().then(function(user){
       //Users.add(user);
@@ -135,6 +153,8 @@ app.post('/signup',
       res.redirect('/');
     });
   });
+
+
 
 /************************************************************/
 // Write your authentication routes here
