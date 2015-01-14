@@ -57,7 +57,8 @@ function(req, res) {
       res.send(200, links.models);
     });
   } else {
-    res.send(405);
+    res.redirect('/');
+   //res.send(405);
   }
 });
 
@@ -82,10 +83,10 @@ app.get('/logout',
 
 app.post('/links',
 function(req, res) {
-  console.log("url=",req.url);
-  console.log("body=",req.body);
+  //console.log("url=",req.url);
+  //console.log("body=",req.body);
   var uri = req.body.url;
-  console.log(uri);
+  //console.log(uri);
   if (!util.isValidUrl(uri)) {
     console.log('Not a valid url: ', uri);
     return res.send(404);
@@ -97,7 +98,7 @@ function(req, res) {
     } else {
       util.getUrlTitle(uri, function(err, title) {
         if (err) {
-          console.log('Error reading URL heading: ', err);
+          //console.log('Error reading URL heading: ', err);
           return res.send(404);
         }
 
@@ -125,7 +126,11 @@ function(req,res){
       req.session.username = req.body.username;
       res.redirect('/');
     } else {
-      res.redirect('/login');
+      req.session.destroy(function(err){
+        res.redirect('/login');
+      });
+      //req.session = null;
+      //res.redirect('/login');
     }
   });
 
@@ -135,24 +140,7 @@ function(req,res){
 app.post('/signup',
   function(req,res){
 
-    var salt = bcrypt.genSaltSync(3);
-    var password_hash = bcrypt.hashSync(req.body.password, salt);
-
-    var user = new User({
-      username: req.body.username,
-      password_hash: password_hash,
-      salt: salt
-    });
-
-
-
-
-
-
-    console.log("User obj=>", user);
-    user.save().then(function(user){
-      //Users.add(user);
-      console.log('new user added:', user);
+    User.saveUser(req.body.username, req.body.password, function(user){
       req.session.username = req.body.username;
       res.redirect('/');
     });
